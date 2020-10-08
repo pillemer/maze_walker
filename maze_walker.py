@@ -2,7 +2,6 @@ import pygame
 import random
 import time
 
-
 WIDTH = 600
 HEIGHT = 600
 FPS = 60
@@ -10,7 +9,7 @@ FPS = 60
 # pygame window set up 
 pygame.init()
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Maze Generator')
+pygame.display.set_caption('Maze Walker')
 clock = pygame.time.Clock()
 
 # colours
@@ -43,7 +42,6 @@ def build_grid(cell_size, grid_size):
 
 # ------ maze builder
 def create_maze(x, y):
-    # draw_nose(x, y)
     visited.append((x,y))
     stack.append((x,y))
 
@@ -78,8 +76,6 @@ def create_maze(x, y):
         else:
             # traceback
             x, y = stack.pop()
-            draw_backtrack(x, y)
-            cover_your_tracks(x, y)
 
 # ------ set up maze creation functions
 def check_neighbourhood(x,y):
@@ -95,37 +91,30 @@ def check_neighbourhood(x,y):
 
     return neighbours
 
-# ------ draw maze creator indicators:
-def draw_nose(x, y):
-    pygame.draw.rect(SCREEN, RED, (x + 1, y + 1, cell_size - 2, cell_size - 2))
-    pygame.display.update()
-
-def draw_backtrack(x, y):
-    pygame.draw.rect(SCREEN, GREEN, (x + 1, y + 1, cell_size - 2, cell_size - 2))
-    pygame.display.update()
-
-def cover_your_tracks(x, y):
-    pygame.draw.rect(SCREEN, BLUE, (x + 1, y + 1, cell_size - 2, cell_size - 2))
-    pygame.display.update()
-
-
 # ------ draw maze creation movemenet:
 def grow_right(x, y):
     pygame.draw.rect(SCREEN, BLUE, (x + 1, y + 1,  2 * cell_size - 2, cell_size - 2))
-    pygame.display.update()
 
 def grow_down(x, y):
     pygame.draw.rect(SCREEN, BLUE, (x + 1, y + 1, cell_size - 2, 2 * cell_size - 2))
-    pygame.display.update()
 
 def grow_left(x, y):
     pygame.draw.rect(SCREEN, BLUE, (x - cell_size + 1, y + 1,  2 * cell_size - 2, cell_size - 2))
-    pygame.display.update()
 
 def grow_up(x, y):
     pygame.draw.rect(SCREEN, BLUE, (x + 1, y - cell_size + 1, cell_size - 2, 2 * cell_size - 2))
-    pygame.display.update()
 
+# ----- end of game animation
+def game_over():
+    for cell in random.sample(grid, len(grid)):
+        filler = pygame.draw.circle(SCREEN, GREEN, (cell[0] + cell_size // 2, cell[1] + cell_size // 2), cell_size // 2 , 0)
+        pygame.display.update(filler)
+        time.sleep(0.01)
+
+
+
+
+# ----------- Classes --------------- #
 
 # ------ create a navigator class
 class Navigator(pygame.sprite.Sprite):
@@ -140,13 +129,20 @@ class Navigator(pygame.sprite.Sprite):
     # navigator movement function
     def step(self, direction):
         compass = {'left': x - cell_size, 'right': x + cell_size, 'up': y - cell_size, 'down': y + cell_size}
-        cover_your_tracks(x, y)
+        self.cover_your_tracks(x, y)
         if direction in 'left right':
             theseus.rect.x = compass[direction] + theseus.rect.width // 2
             theseus.location = (compass[direction], y)
         if direction in 'up down':
             theseus.rect.y = compass[direction] + theseus.rect.width // 2
             theseus.location = (x, compass[direction])
+    
+    def cover_your_tracks(self, x, y):
+        pygame.draw.rect(SCREEN, BLUE, (x + 1, y + 1, cell_size - 2, cell_size - 2))
+        pygame.display.update()
+
+
+# ------ create a dot class
 
 class Dot(pygame.sprite.Sprite):
 
@@ -166,8 +162,7 @@ class Dot(pygame.sprite.Sprite):
             centered = (x + cell_size // 2, y + cell_size // 2)
         pygame.draw.circle(SCREEN, RED, centered, self.size , 0)
 
-
-# ----------------- Action centre
+# ----------------- Action centre ----------------- #
 
 # ------ make a maze
 build_grid(cell_size, grid_size)
@@ -204,7 +199,11 @@ while running:
                     theseus.step('left')
             if event.key == pygame.K_RIGHT:
                 if (x + cell_size, y) in grid and 'right' in openings[(x,y)]:
-                    theseus.step('right')   
+                    theseus.step('right')  
+            if event.key == pygame.K_q:
+                game_over()
+                pygame.quit()
+
         if theseus.location == dot.location:
             score += 1
             dot.move()
