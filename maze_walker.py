@@ -2,40 +2,42 @@ import pygame
 import random
 import time
 
-WIDTH = 600
-HEIGHT = 600
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 600
 FPS = 60
 
 # pygame window set up 
-pygame.init()
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Maze Walker')
-clock = pygame.time.Clock()
+def set_up(title):
+    pygame.init()
+    SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT + cell_size))
+    pygame.display.set_caption(title)
+    clock = pygame.time.Clock()
+    return SCREEN, clock
 
 # colours
 BLACK = (0,   0,   0  )
-WHITE = (192, 192, 192)
+GREY =  (192, 192, 192)
 BLUE =  (0,   0,   128)
 RED =   (255, 0,   0  )
 GREEN = (0,   255, 0  )
 
-# initial grid settings
+# initial variables
 cell_size = 60
-grid_size = WIDTH // cell_size 
-
+grid_size = SCREEN_WIDTH // cell_size 
 grid = []
 stack = []
 visited = []
 openings = {}
-path = {}
 score = 0
 
+
+# ----------- Functions --------------- #
 
 # ------ grid builder
 def build_grid(cell_size, grid_size):
     for i in range(grid_size):
         for j in range(grid_size):
-            pygame.draw.rect(SCREEN, WHITE, (i * (cell_size), 
+            pygame.draw.rect(SCREEN, GREY, (i * (cell_size), 
                                             j * (cell_size), 
                                             cell_size, cell_size), 1)
             grid.append((i * (cell_size), j * (cell_size)))
@@ -68,8 +70,6 @@ def create_maze(x, y):
                 grow_left(x,y) 
                 openings.setdefault((x,y),[]).append('left')
                 openings.setdefault((cell_x,cell_y),[]).append('right')   
-
-            path[(cell_x, cell_y)] = (x, y)
 
             create_maze(cell_x, cell_y)
 
@@ -104,14 +104,21 @@ def grow_left(x, y):
 def grow_up(x, y):
     pygame.draw.rect(SCREEN, BLUE, (x + 1, y - cell_size + 1, cell_size - 2, 2 * cell_size - 2))
 
+# ----- score update
+def score_update(score):
+    fontObj = pygame.font.Font('freesansbold.ttf', cell_size - 2)
+    scoreboard = fontObj.render(f'Score: {score}  ', True, GREY, BLACK )
+    scoreboardRect = scoreboard.get_rect()
+    scoreboardRect.bottomleft = (0,  SCREEN_HEIGHT + cell_size)
+    SCREEN.blit(scoreboard, scoreboardRect) 
+
+
 # ----- end of game animation
 def game_over():
     for cell in random.sample(grid, len(grid)):
         filler = pygame.draw.circle(SCREEN, GREEN, (cell[0] + cell_size // 2, cell[1] + cell_size // 2), cell_size // 2 , 0)
         pygame.display.update(filler)
         time.sleep(0.01)
-
-
 
 
 # ----------- Classes --------------- #
@@ -162,17 +169,19 @@ class Dot(pygame.sprite.Sprite):
             centered = (x + cell_size // 2, y + cell_size // 2)
         pygame.draw.circle(SCREEN, RED, centered, self.size , 0)
 
+
 # ----------------- Action centre ----------------- #
 
 # ------ make a maze
+SCREEN, clock = set_up('Maze Walker')
 build_grid(cell_size, grid_size)
-create_maze(0,0)  # start the maze in the top left corner
+create_maze(0, 0)  
 
 # ------ make a navigator
 theseus = Navigator(GREEN, cell_size // 2, cell_size // 2)
-start_x, start_y = grid[len(grid)-1]   # start the navigator on the bottom right corner
-theseus.location = (start_x, start_y)
-theseus.rect.x, theseus.rect.y = start_x + theseus.rect.width // 2, start_y + theseus.rect.height // 2
+theseus.location = grid[len(grid)-1]   # start the navigator on the bottom right corner
+theseus.rect.x = theseus.location[0] + theseus.rect.width // 2
+theseus.rect.y = theseus.location[1] + theseus.rect.height // 2
 sprites = pygame.sprite.Group()
 sprites.add(theseus)
 
@@ -180,8 +189,7 @@ sprites.add(theseus)
 dot = Dot(cell_size // 8)
 
 # ------ pygame loop
-running = True
-while running:
+while True:
     clock.tick(FPS)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -207,7 +215,7 @@ while running:
         if theseus.location == dot.location:
             score += 1
             dot.move()
-            print(f'score: {score}')
+            score_update(score)
 
 
     sprites.draw(SCREEN)
